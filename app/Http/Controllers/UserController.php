@@ -2,13 +2,14 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Requests\StoreUserRequest;
-use App\Http\Requests\UpdateUserRequest;
 use App\Models\User;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Hash;
 use Inertia\Inertia;
 use Inertia\Response;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
+use App\Http\Requests\StoreUserRequest;
+use App\Http\Requests\UpdateUserRequest;
+use App\Http\Requests\Concerns\HasUserValidationRules;
 
 class UserController extends Controller
 {
@@ -38,13 +39,16 @@ class UserController extends Controller
 
     public function create(): Response
     {
-        return Inertia::render('Users/Create');
+        return Inertia::render('Users/Create', [
+        'passwordHelp' => HasUserValidationRules::passwordHelp(),
+    ]);
     }
 
     public function edit(User $user): Response
     {
         return Inertia::render('Users/Edit', [
-            'user' => $user->only(['id', 'firstname', 'lastname', 'email']),
+            'user' => $user->toArray(),
+            'passwordHelp' => HasUserValidationRules::passwordHelp(),
         ]);
     }
 

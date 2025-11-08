@@ -31,4 +31,9 @@ trait HasUserValidationRules
                 : ['required','string','confirmed','min:8','regex:/'.$passwordRegex.'/'],
         ];
     }
+
+    public static function passwordHelp(): string
+    {
+        return config('auth.password_help', env('PASSWORD_HELP', "Au moins 8 caractères, dont une majuscule et un chiffre."));
+    }
 }

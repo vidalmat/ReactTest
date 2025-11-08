@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { Head } from "@inertiajs/react";
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Inertia } from "@inertiajs/inertia";
@@ -9,15 +9,42 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import Pagination from '@/components/Pagination';
 
+import { Edit3, Trash2 } from 'lucide-react';
+import ConfirmModal from '@/Components/ConfirmModal';
+
 export default function UsersIndex({ users }) {
-    const handleDelete = async (id) => {
-        if (!confirm("Êtes-vous sûr de vouloir supprimer cet utilisateur ?")) return;
+    const [confirmOpen, setConfirmOpen] = useState(false);
+    const [deletingUserId, setDeletingUserId] = useState(null);
+    const [isDeleting, setIsDeleting] = useState(false);
+
+    const openDeleteConfirm = (id) => {
+        setDeletingUserId(id);
+        setConfirmOpen(true);
+    };
+
+    const closeDeleteConfirm = () => {
+        if (isDeleting) return; // prévenir la fermeture pendant la suppression
+        setConfirmOpen(false);
+        setDeletingUserId(null);
+    };
+
+    const handleConfirmDelete = async () => {
+        if (!deletingUserId) return;
+        setIsDeleting(true);
         try {
-            await axios.delete(route("users.destroy", id));
+            await axios.delete(route("users.destroy", deletingUserId));
+            setIsDeleting(false);
+            setConfirmOpen(false);
+            setDeletingUserId(null);
+            // reload the users only
             Inertia.reload({ only: ["users"] });
         } catch (error) {
+            setIsDeleting(false);
             console.error("Erreur lors de la suppression :", error);
+            // Optionnel: afficher une notification utilisateur plus conviviale
             alert("Erreur lors de la suppression");
+            setConfirmOpen(false);
+            setDeletingUserId(null);
         }
     };
 
@@ -63,11 +90,26 @@ export default function UsersIndex({ users }) {
                                             <td className="px-4 py-3 text-sm text-gray-900">{u.firstname}</td>
                                             <td className="px-4 py-3 text-sm text-gray-900">{u.lastname}</td>
                                             <td className="px-4 py-3 text-sm text-gray-500">{u.email}</td>
-                                            <td className="px-4 py-3 text-sm text-right space-x-2">
-                                                <Link href={route("users.edit", u.id)} className="inline-block">
-                                                    <Button variant="ghost" size="sm">Modifier</Button>
-                                                </Link>
-                                                <Button variant="destructive" size="sm" onClick={() => handleDelete(u.id)}>Supprimer</Button>
+                                            <td className="px-4 py-3 text-sm text-right">
+                                                <div className="inline-flex items-center gap-2">
+                                                    <Link href={route("users.edit", u.id)} as="a">
+                                                        <Button variant="ghost" size="sm" className="p-2">
+                                                            <Edit3 className="h-4 w-4 text-orange-500" />
+                                                            <span className="sr-only">Modifier</span>
+                                                        </Button>
+                                                    </Link>
+
+                                                    <Button
+                                                        variant="destructive"
+                                                        size="sm"
+                                                        className="p-2"
+                                                        onClick={() => openDeleteConfirm(u.id)}
+                                                        aria-label="Supprimer"
+                                                    >
+                                                        <Trash2 className="h-4 w-4 text-white" />
+                                                        <span className="sr-only">Supprimer</span>
+                                                    </Button>
+                                                </div>
                                             </td>
                                         </tr>
                                     ))}
@@ -75,12 +117,24 @@ export default function UsersIndex({ users }) {
                             </table>
                         </div>
 
-                        {/* pagination */}
-                        <Pagination links={users.links} meta={users} />
-                        
+                        <div className="mt-4">
+                            <Pagination links={users.links} meta={users} />
+                        </div>
+
                     </CardContent>
                 </Card>
             </div>
+
+            <ConfirmModal
+                open={confirmOpen}
+                title="Supprimer l'utilisateur"
+                description="Cette action est irréversible. Voulez-vous vraiment supprimer cet utilisateur ?"
+                confirmLabel="Supprimer"
+                cancelLabel="Annuler"
+                loading={isDeleting}
+                onConfirm={handleConfirmDelete}
+                onClose={closeDeleteConfirm}
+            />
         </>
     );
 }

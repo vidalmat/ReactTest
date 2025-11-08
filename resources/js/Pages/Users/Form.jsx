@@ -1,7 +1,11 @@
 import React, { useState, useEffect } from "react";
 import { Inertia } from "@inertiajs/inertia";
+import { usePage } from "@inertiajs/react";
 
-export default function UserForm({ initial = {}, submitUrl, method = "post" }) {
+export default function UserForm({ initial = {}, submitUrl, method = "post", passwordHelp = null }) {
+    const page = usePage();
+    const isCreate = (method || "post").toLowerCase() === "post";
+
     const [form, setForm] = useState({
         firstname: initial.firstname ?? "",
         lastname: initial.lastname ?? "",
@@ -13,7 +17,6 @@ export default function UserForm({ initial = {}, submitUrl, method = "post" }) {
     const [errors, setErrors] = useState({});
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    // Update form when initial changes (e.g. navigating between users without full reload)
     useEffect(() => {
         setForm((f) => ({
             ...f,
@@ -23,13 +26,39 @@ export default function UserForm({ initial = {}, submitUrl, method = "post" }) {
         }));
     }, [initial.firstname, initial.lastname, initial.email]);
 
+    // Si Inertia met les erreurs de validation dans page.props.errors, les synchroniser avec l'état local
+    useEffect(() => {
+        if (page.props && page.props.errors) {
+            setErrors(normalizeErrors(page.props.errors || {}));
+        }
+        // Désactive la règle ESLint react-hooks/exhaustive-deps pour éviter les faux positifs sur les dépendances
+    }, [page.props.errors]);
+
     const onChange = (e) => {
         const { name, value } = e.target;
         setForm((prev) => ({ ...prev, [name]: value }));
     };
 
+    // Normaliser les erreurs : si le serveur retourne un tableau ou une chaîne, nous stockons toujours une chaîne
+    const normalizeErrors = (errs) => {
+        const normalized = {};
+        if (!errs) return normalized;
+        Object.keys(errs).forEach((k) => {
+            const v = errs[k];
+            normalized[k] = Array.isArray(v) ? v[0] : v;
+        });
+        return normalized;
+    };
+
+    const getError = (field) => {
+        const v = errors[field];
+        if (!v) return null;
+        return typeof v === "string" ? v : Array.isArray(v) ? v[0] : String(v);
+    };
+
     const handleSubmit = (e) => {
         e.preventDefault();
+        // Effacer les erreurs précédentes pour que l'interface utilisateur se mette à jour en attendant le serveur
         setErrors({});
         setIsSubmitting(true);
 
@@ -37,7 +66,7 @@ export default function UserForm({ initial = {}, submitUrl, method = "post" }) {
 
         const options = {
             onError: (errs) => {
-                setErrors(errs || {});
+                setErrors(normalizeErrors(errs || {}));
                 setIsSubmitting(false);
             },
             onFinish: () => {
@@ -53,75 +82,96 @@ export default function UserForm({ initial = {}, submitUrl, method = "post" }) {
     };
 
     return (
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} className="space-y-6" noValidate>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                    <label className="block text-sm font-medium text-gray-700">Prénom</label>
+                    <label htmlFor="firstname" className="block text-sm font-medium text-gray-700">Prénom</label>
                     <input
+                        id="firstname"
                         name="firstname"
                         value={form.firstname}
                         onChange={onChange}
-                        className={`mt-1 block w-full rounded-md border px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 ${errors.firstname ? "border-red-300 focus:ring-red-500" : "border-gray-200 focus:ring-indigo-500"
+                        aria-invalid={!!getError("firstname")}
+                        aria-describedby={getError("firstname") ? "err-firstname" : undefined}
+                        className={`mt-1 block w-full rounded-md border px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 ${getError("firstname") ? "border-red-300 focus:ring-red-500" : "border-gray-200 focus:ring-indigo-500"
                             }`}
                         autoComplete="given-name"
+                        placeholder="Prénom"
                     />
-                    {errors.firstname && <p className="mt-1 text-xs text-red-600">{errors.firstname[0]}</p>}
+                    {getError("firstname") && <p id="err-firstname" className="mt-1 text-xs text-red-600">{getError("firstname")}</p>}
                 </div>
 
                 <div>
-                    <label className="block text-sm font-medium text-gray-700">Nom</label>
+                    <label htmlFor="lastname" className="block text-sm font-medium text-gray-700">Nom</label>
                     <input
+                        id="lastname"
                         name="lastname"
                         value={form.lastname}
                         onChange={onChange}
-                        className={`mt-1 block w-full rounded-md border px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 ${errors.lastname ? "border-red-300 focus:ring-red-500" : "border-gray-200 focus:ring-indigo-500"
+                        aria-invalid={!!getError("lastname")}
+                        aria-describedby={getError("lastname") ? "err-lastname" : undefined}
+                        className={`mt-1 block w-full rounded-md border px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 ${getError("lastname") ? "border-red-300 focus:ring-red-500" : "border-gray-200 focus:ring-indigo-500"
                             }`}
                         autoComplete="family-name"
+                        placeholder="Nom"
                     />
-                    {errors.lastname && <p className="mt-1 text-xs text-red-600">{errors.lastname[0]}</p>}
+                    {getError("lastname") && <p id="err-lastname" className="mt-1 text-xs text-red-600">{getError("lastname")}</p>}
                 </div>
             </div>
 
             <div>
-                <label className="block text-sm font-medium text-gray-700">Email</label>
+                <label htmlFor="email" className="block text-sm font-medium text-gray-700">E‑mail</label>
                 <input
+                    id="email"
                     name="email"
                     type="email"
                     value={form.email}
                     onChange={onChange}
-                    className={`mt-1 block w-full rounded-md border px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 ${errors.email ? "border-red-300 focus:ring-red-500" : "border-gray-200 focus:ring-indigo-500"
+                    aria-invalid={!!getError("email")}
+                    aria-describedby={getError("email") ? "err-email" : undefined}
+                    className={`mt-1 block w-full rounded-md border px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 ${getError("email") ? "border-red-300 focus:ring-red-500" : "border-gray-200 focus:ring-indigo-500"
                         }`}
                     autoComplete="email"
+                    placeholder="exemple@domaine.tld"
                 />
-                {errors.email && <p className="mt-1 text-xs text-red-600">{errors.email[0]}</p>}
+                {getError("email") && <p id="err-email" className="mt-1 text-xs text-red-600">{getError("email")}</p>}
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                    <label className="block text-sm font-medium text-gray-700">Mot de passe</label>
+                    <label htmlFor="password" className="block text-sm font-medium text-gray-700">Mot de passe</label>
                     <input
+                        id="password"
                         name="password"
                         type="password"
                         value={form.password}
                         onChange={onChange}
-                        className={`mt-1 block w-full rounded-md border px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 ${errors.password ? "border-red-300 focus:ring-red-500" : "border-gray-200 focus:ring-indigo-500"
+                        aria-invalid={!!getError("password")}
+                        aria-describedby={getError("password") ? "err-password" : (passwordHelp ? "help-password" : undefined)}
+                        className={`mt-1 block w-full rounded-md border px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 ${getError("password") ? "border-red-300 focus:ring-red-500" : "border-gray-200 focus:ring-indigo-500"
                             }`}
                         autoComplete="new-password"
-                        placeholder="Laisser vide pour ne pas changer"
+                        placeholder={isCreate ? "Choisir un mot de passe (min. 8 caractères)" : "Laisser vide pour ne pas changer"}
+                        required={isCreate}
                     />
-                    {errors.password && <p className="mt-1 text-xs text-red-600">{errors.password[0]}</p>}
+                    {passwordHelp && !getError("password") && (
+                        <p id="help-password" className="mt-1 text-xs text-gray-500">{passwordHelp}</p>
+                    )}
+                    {getError("password") && <p id="err-password" className="mt-1 text-xs text-red-600">{getError("password")}</p>}
                 </div>
 
                 <div>
-                    <label className="block text-sm font-medium text-gray-700">Confirmation</label>
+                    <label htmlFor="password_confirmation" className="block text-sm font-medium text-gray-700">Confirmation</label>
                     <input
+                        id="password_confirmation"
                         name="password_confirmation"
                         type="password"
                         value={form.password_confirmation}
                         onChange={onChange}
                         className="mt-1 block w-full rounded-md border border-gray-200 px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-indigo-500"
                         autoComplete="new-password"
-                        placeholder="Confirme le mot de passe"
+                        placeholder={isCreate ? "Confirme le mot de passe" : "Confirme le mot de passe (laisser vide si inchangé)"}
+                        required={isCreate}
                     />
                 </div>
             </div>
@@ -131,8 +181,7 @@ export default function UserForm({ initial = {}, submitUrl, method = "post" }) {
                     <button
                         type="submit"
                         disabled={isSubmitting}
-                        className={`inline-flex items-center px-4 py-2 rounded-md text-sm font-medium text-white ${isSubmitting ? "bg-indigo-400" : "bg-indigo-600 hover:bg-indigo-700"
-                            }`}
+                        className={`inline-flex items-center px-4 py-2 rounded-md text-sm font-medium text-white ${isSubmitting ? "bg-indigo-400" : "bg-indigo-600 hover:bg-indigo-700"}`}
                     >
                         {isSubmitting ? "En cours..." : "Enregistrer"}
                     </button>
@@ -152,10 +201,6 @@ export default function UserForm({ initial = {}, submitUrl, method = "post" }) {
                     >
                         Réinitialiser
                     </button>
-                </div>
-
-                <div className="text-sm text-gray-500">
-                    <span className="font-medium">{/* keep spacing */}</span>
                 </div>
             </div>
         </form>

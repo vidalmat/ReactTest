@@ -1,5 +1,5 @@
 import React from "react";
-import { Head } from "@inertiajs/react";
+import { Head, Link } from "@inertiajs/react";
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import UserForm from "./Form";
 
@@ -11,16 +11,22 @@ export default function Create() {
             <Head title="Nouvel utilisateur" />
 
             <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8 py-6">
-                <div className="mb-6">
-                    <h1 className="text-2xl font-semibold text-gray-900">Nouvel utilisateur</h1>
+                <div className="flex justify-between">
+                    <div className="flex items-center space-x-2">
+                        <Link
+                            href={route('users.index')}
+                            className="text-sm px-3 py-2 rounded-md border border-gray-200 bg-white hover:bg-gray-50"
+                        >
+                            Retour
+                        </Link>
+                    </div>
+                    <div className="mb-6">
+                        <h1 className="text-2xl font-semibold text-gray-900">Nouvel utilisateur</h1>
+                    </div>
                 </div>
 
                 <Card>
-                    <CardHeader>
-                        <CardTitle>Ajouter un utilisateur</CardTitle>
-                    </CardHeader>
-
-                    <CardContent>
+                    <CardContent className="p-6">
                         <UserForm submitUrl={route("users.store")} method="post" />
                     </CardContent>
                 </Card>
