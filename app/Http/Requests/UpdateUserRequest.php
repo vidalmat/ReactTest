@@ -6,7 +6,7 @@ use App\Http\Requests\Concerns\HasUserValidationRules;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Auth;
 
-class ProfileUpdateRequest extends FormRequest
+class UpdateUserRequest extends FormRequest
 {
     use HasUserValidationRules;
 
@@ -17,10 +17,15 @@ class ProfileUpdateRequest extends FormRequest
 
     public function rules(): array
     {
-        $user = $this->user();
-        $ignoreId = $user ? $user->id : null;
+        $routeUser = $this->route('user');
+        $ignoreId = null;
+        if ($routeUser instanceof \App\Models\User) {
+            $ignoreId = $routeUser->id;
+        } elseif (is_numeric($routeUser)) {
+            $ignoreId = (int) $routeUser;
+        }
 
-        // isUpdate = true (profil update)
+        // isUpdate = true => password nullable
         return $this->userRules($ignoreId, true);
     }
 

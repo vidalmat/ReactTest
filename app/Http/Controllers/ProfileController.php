@@ -8,6 +8,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Redirect;
+use Illuminate\Support\Facades\Hash;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -21,6 +22,8 @@ class ProfileController extends Controller
         return Inertia::render('Profile/Edit', [
             'mustVerifyEmail' => $request->user() instanceof MustVerifyEmail,
             'status' => session('status'),
+            // on peut exposer l'utilisateur si besoin
+            'user' => $request->user()->only(['id','firstname','lastname','email']),
         ]);
     }
 
@@ -29,15 +32,24 @@ class ProfileController extends Controller
      */
     public function update(ProfileUpdateRequest $request): RedirectResponse
     {
-        $request->user()->fill($request->validated());
+        $data = $request->validated();
 
-        if ($request->user()->isDirty('email')) {
-            $request->user()->email_verified_at = null;
+        if (empty($data['password'])) {
+            unset($data['password']);
+        } else {
+            $data['password'] = Hash::make($data['password']);
         }
 
-        $request->user()->save();
+        $user = $request->user();
+        $user->fill($data);
 
-        return Redirect::route('profile.edit');
+        if ($user->isDirty('email')) {
+            $user->email_verified_at = null;
+        }
+
+        $user->save();
+
+        return Redirect::route('profile.edit')->with('status', 'profile-updated');
     }
 
     /**

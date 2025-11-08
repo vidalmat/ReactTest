@@ -112,4 +112,6 @@ return [
 
     'password_timeout' => env('AUTH_PASSWORD_TIMEOUT', 10800),
 
+    // Regex for password validation
+    'password_regex' => env('PASSWORD_REGEX', '^(?=.*[A-Z])(?=.*\d).{8,}$'),
 ];
