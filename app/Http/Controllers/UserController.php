@@ -13,6 +13,7 @@ use App\Http\Requests\Concerns\HasUserValidationRules;
 
 class UserController extends Controller
 {
+    // Affiche la liste des utilisateurs
     public function index(): Response
     {
         $perPage = 15;
@@ -23,6 +24,7 @@ class UserController extends Controller
         ]);
     }
 
+    // Stocke un nouvel utilisateur
     public function store(StoreUserRequest $request)
     {
         $data = $request->validated();
@@ -37,6 +39,7 @@ class UserController extends Controller
         return redirect()->route('users.index');
     }
 
+    // Affiche le formulaire de création d'un utilisateur
     public function create(): Response
     {
         return Inertia::render('Users/Create', [
@@ -44,6 +47,7 @@ class UserController extends Controller
     ]);
     }
 
+    // Affiche le formulaire d'édition d'un utilisateur
     public function edit(User $user): Response
     {
         return Inertia::render('Users/Edit', [
@@ -52,6 +56,7 @@ class UserController extends Controller
         ]);
     }
 
+    // Met à jour un utilisateur existant
     public function update(UpdateUserRequest $request, User $user)
     {
         $data = $request->validated();
@@ -72,6 +77,7 @@ class UserController extends Controller
         return redirect()->route('users.index');
     }
 
+    // Supprime un utilisateur
     public function destroy(Request $request, User $user)
     {
         $user->delete();

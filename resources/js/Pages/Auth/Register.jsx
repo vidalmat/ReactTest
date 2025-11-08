@@ -1,117 +1,188 @@
+import React, { useState, useEffect } from 'react';
 import InputError from '@/Components/InputError';
 import InputLabel from '@/Components/InputLabel';
 import PrimaryButton from '@/Components/PrimaryButton';
 import TextInput from '@/Components/TextInput';
 import GuestLayout from '@/Layouts/GuestLayout';
-import { Head, Link, useForm } from '@inertiajs/react';
+import { Head } from '@inertiajs/react';
+import { usePage } from '@inertiajs/react';
+import axios from 'axios';
 
 export default function Register() {
-    const { data, setData, post, processing, errors, reset } = useForm({
-        name: '',
+    const page = usePage();
+    const passwordHelp = page.props?.passwordHelp ?? null;
+
+    const [form, setForm] = useState({
+        firstname: '',
+        lastname: '',
         email: '',
         password: '',
         password_confirmation: '',
     });
 
-    const submit = (e) => {
-        e.preventDefault();
+    const [errors, setErrors] = useState({});
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
-        post(route('register'), {
-            onFinish: () => reset('password', 'password_confirmation'),
+    // Si Inertia met les erreurs de validation dans page.props.errors, les synchroniser avec l'état local
+    useEffect(() => {
+        if (page.props && page.props.errors) {
+            setErrors(normalizeErrors(page.props.errors || {}));
+        }
+    }, [page.props.errors]);
+
+    const onChange = (e) => {
+        const { name, value } = e.target;
+        setForm((prev) => ({ ...prev, [name]: value }));
+    };
+
+    const normalizeErrors = (errs) => {
+        const normalized = {};
+        if (!errs) return normalized;
+        Object.keys(errs).forEach((k) => {
+            const v = errs[k];
+            normalized[k] = Array.isArray(v) ? v[0] : v;
         });
+        return normalized;
+    };
+
+    const getError = (field) => {
+        const v = errors[field];
+        if (!v) return null;
+        return typeof v === 'string' ? v : Array.isArray(v) ? v[0] : String(v);
+    };
+
+    const submit = async (e) => {
+        e.preventDefault();
+        setErrors({});
+        setIsSubmitting(true);
+
+        try {
+            await axios.post(route('register'), form);
+            // Rediriger vers la page souhaitée après succès
+            window.location.href = route('dashboard'); // ou autre
+        } catch (error) {
+                // Supporter l'objet rejeté par l'intercepteur: { validation: errors, original: err }
+                const validation = error?.validation ?? error?.response?.data?.errors ?? error?.original?.response?.data?.errors ?? null;
+                if (validation) {
+                    setErrors(normalizeErrors(validation));
+                } else {
+                    // eslint-disable-next-line no-console
+                    console.error('Registration error', error);
+                    alert('Erreur serveur, veuillez réessayer.');
+                }
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     return (
         <GuestLayout>
-            <Head title="Register" />
+            <Head title="Inscription" />
 
-            <form onSubmit={submit}>
-                <div>
-                    <InputLabel htmlFor="name" value="Name" />
+            {/* noValidate pour désactiver la validation HTML5 native */}
+            <form onSubmit={submit} noValidate className="space-y-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <InputLabel htmlFor="firstname" value="Prénom" />
 
-                    <TextInput
-                        id="name"
-                        name="name"
-                        value={data.name}
-                        className="mt-1 block w-full"
-                        autoComplete="name"
-                        isFocused={true}
-                        onChange={(e) => setData('name', e.target.value)}
-                        required
-                    />
+                        <TextInput
+                            id="firstname"
+                            name="firstname"
+                            value={form.firstname}
+                            className="mt-1 block w-full"
+                            autoComplete="given-name"
+                            isFocused={true}
+                            onChange={onChange}
+                        />
 
-                    <InputError message={errors.name} className="mt-2" />
+                        <InputError message={getError('firstname')} className="mt-2" />
+                    </div>
+
+                    <div>
+                        <InputLabel htmlFor="lastname" value="Nom" />
+
+                        <TextInput
+                            id="lastname"
+                            name="lastname"
+                            value={form.lastname}
+                            className="mt-1 block w-full"
+                            autoComplete="family-name"
+                            onChange={onChange}
+                        />
+
+                        <InputError message={getError('lastname')} className="mt-2" />
+                    </div>
                 </div>
 
                 <div className="mt-4">
-                    <InputLabel htmlFor="email" value="Email" />
+                    <InputLabel htmlFor="email" value="E‑mail" />
 
                     <TextInput
                         id="email"
                         type="email"
                         name="email"
-                        value={data.email}
+                        value={form.email}
                         className="mt-1 block w-full"
                         autoComplete="username"
-                        onChange={(e) => setData('email', e.target.value)}
-                        required
+                        onChange={onChange}
                     />
 
-                    <InputError message={errors.email} className="mt-2" />
+                    <InputError message={getError('email')} className="mt-2" />
                 </div>
 
                 <div className="mt-4">
-                    <InputLabel htmlFor="password" value="Password" />
+                    <InputLabel htmlFor="password" value="Mot de passe" />
 
                     <TextInput
                         id="password"
                         type="password"
                         name="password"
-                        value={data.password}
+                        value={form.password}
                         className="mt-1 block w-full"
                         autoComplete="new-password"
-                        onChange={(e) => setData('password', e.target.value)}
-                        required
+                        onChange={onChange}
                     />
 
-                    <InputError message={errors.password} className="mt-2" />
+                    {/* afficher l'aide mot de passe si fournie depuis le contrôleur */}
+                    {!getError('password') && passwordHelp && (
+                        <p className="mt-1 text-xs text-gray-500">{passwordHelp}</p>
+                    )}
+
+                    <InputError message={getError('password')} className="mt-2" />
                 </div>
 
                 <div className="mt-4">
                     <InputLabel
                         htmlFor="password_confirmation"
-                        value="Confirm Password"
+                        value="Confirmation du mot de passe"
                     />
 
                     <TextInput
                         id="password_confirmation"
                         type="password"
                         name="password_confirmation"
-                        value={data.password_confirmation}
+                        value={form.password_confirmation}
                         className="mt-1 block w-full"
                         autoComplete="new-password"
-                        onChange={(e) =>
-                            setData('password_confirmation', e.target.value)
-                        }
-                        required
+                        onChange={onChange}
                     />
 
                     <InputError
-                        message={errors.password_confirmation}
+                        message={getError('password_confirmation')}
                         className="mt-2"
                     />
                 </div>
 
                 <div className="mt-4 flex items-center justify-end">
-                    <Link
+                    <a
                         href={route('login')}
                         className="rounded-md text-sm text-gray-600 underline hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
                     >
-                        Already registered?
-                    </Link>
+                        Vous avez déjà un compte ?
+                    </a>
 
-                    <PrimaryButton className="ms-4" disabled={processing}>
-                        Register
+                    <PrimaryButton className="ms-4" disabled={isSubmitting}>
+                        {isSubmitting ? "En cours..." : "S'inscrire"}
                     </PrimaryButton>
                 </div>
             </form>

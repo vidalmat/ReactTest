@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Inertia } from "@inertiajs/inertia";
+import axios from "axios";
 import { usePage } from "@inertiajs/react";
 
 export default function UserForm({ initial = {}, submitUrl, method = "post", passwordHelp = null }) {
@@ -56,29 +56,30 @@ export default function UserForm({ initial = {}, submitUrl, method = "post", pas
         return typeof v === "string" ? v : Array.isArray(v) ? v[0] : String(v);
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
-        // Effacer les erreurs précédentes pour que l'interface utilisateur se mette à jour en attendant le serveur
         setErrors({});
         setIsSubmitting(true);
 
-        const methodLower = (method || "post").toLowerCase();
-
-        const options = {
-            onError: (errs) => {
-                setErrors(normalizeErrors(errs || {}));
-                setIsSubmitting(false);
-            },
-            onFinish: () => {
-                setIsSubmitting(false);
-            },
-        };
-
-        if (methodLower === "put" || methodLower === "patch") {
-            Inertia.put(submitUrl, form, options);
-        } else {
-            Inertia.post(submitUrl, form, options);
+        try {
+            if ((method || "post").toLowerCase() === "put") {
+                await axios.put(submitUrl, form);
+            } else {
+                await axios.post(submitUrl, form);
+            }
+            // Redirection vers la liste (SPA : window.location ou autre)
+            window.location.href = '/users';
+        } catch (error) {
+                // Axios peut rejeter avec { validation: errors, original: err }
+                const validation = error?.validation ?? error?.response?.data?.errors ?? error?.original?.response?.data?.errors ?? null;
+                if (validation) {
+                    setErrors(normalizeErrors(validation));
+                } else {
+                    console.error('Server error (users form)', error);
+                    alert('Erreur serveur');
+                }
         }
+        setIsSubmitting(false);
     };
 
     return (
@@ -120,7 +121,7 @@ export default function UserForm({ initial = {}, submitUrl, method = "post", pas
             </div>
 
             <div>
-                <label htmlFor="email" className="block text-sm font-medium text-gray-700">E‑mail</label>
+                <label htmlFor="email" className="block text-sm font-medium text-gray-700">Email</label>
                 <input
                     id="email"
                     name="email"
