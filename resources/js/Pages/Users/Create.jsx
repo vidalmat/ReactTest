@@ -3,13 +3,27 @@ import { Head } from "@inertiajs/react";
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import UserForm from "./Form";
 
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+
 export default function Create() {
     return (
         <>
             <Head title="Nouvel utilisateur" />
-            <div>
-                <h1 className="text-2xl font-bold mb-4">Nouvel utilisateur</h1>
-                <UserForm submitUrl={route("users.store")} method="post" />
+
+            <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8 py-6">
+                <div className="mb-6">
+                    <h1 className="text-2xl font-semibold text-gray-900">Nouvel utilisateur</h1>
+                </div>
+
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Ajouter un utilisateur</CardTitle>
+                    </CardHeader>
+
+                    <CardContent>
+                        <UserForm submitUrl={route("users.store")} method="post" />
+                    </CardContent>
+                </Card>
             </div>
         </>
     );
