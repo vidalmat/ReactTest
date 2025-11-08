@@ -18,14 +18,7 @@ class UserController extends Controller
         $users = User::orderBy('created_at', 'desc')->paginate($perPage)->withQueryString();
 
         return Inertia::render('Users/Index', [
-            'users' => $users,
-        ]);
-    }
-
-    public function edit(User $user): Response
-    {
-        return Inertia::render('Users/Edit', [
-            'user' => $user->only(['id', 'firstname', 'lastname', 'email']),
+            'users' => $users->toArray(),
         ]);
     }
 
@@ -41,6 +34,18 @@ class UserController extends Controller
         }
 
         return redirect()->route('users.index');
+    }
+
+    public function create(): Response
+    {
+        return Inertia::render('Users/Create');
+    }
+
+    public function edit(User $user): Response
+    {
+        return Inertia::render('Users/Edit', [
+            'user' => $user->only(['id', 'firstname', 'lastname', 'email']),
+        ]);
     }
 
     public function update(UpdateUserRequest $request, User $user)
